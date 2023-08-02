@@ -24,8 +24,9 @@ public class RegisteredPlayer {
     
     private LobbyPlayer player = null;
     
-    private int startingLife = 20;
+    private int startingLife = 10;
     private int startingHand = 7;
+    private int maxHandSize = 5;
     private int manaShards = 0;
     private Iterable<IPaperCard> cardsOnBattlefield = null;
     private Iterable<IPaperCard> extraCardsOnBattlefield = null;
@@ -100,6 +101,9 @@ public class RegisteredPlayer {
 
     public int getStartingHand() {
         return startingHand;
+    }
+    public int getMaxHandSize() {
+        return maxHandSize;
     }
     public void setStartingHand(int startingHand0) {
         this.startingHand = startingHand0;

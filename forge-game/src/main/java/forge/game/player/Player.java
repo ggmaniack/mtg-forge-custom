@@ -86,6 +86,7 @@ import forge.game.keyword.KeywordCollection.KeywordCollectionView;
 import forge.game.keyword.KeywordInterface;
 import forge.game.keyword.KeywordsChange;
 import forge.game.mana.ManaPool;
+import forge.game.mulligan.AbstractMulligan;
 import forge.game.phase.PhaseHandler;
 import forge.game.phase.PhaseType;
 import forge.game.replacement.ReplacementEffect;
@@ -134,8 +135,8 @@ public class Player extends GameEntity implements Comparable<Player> {
 
     private final Map<Card, Integer> commanderDamage = Maps.newHashMap();
 
-    private int life = 20;
-    private int startingLife = 20;
+    private int life = 10;
+    private int startingLife = 10;
     private int lifeStartedThisTurnWith = startingLife;
     private int spellsCastThisTurn;
     private int spellsCastThisGame;
@@ -162,7 +163,7 @@ public class Player extends GameEntity implements Comparable<Player> {
     private int numForetoldThisTurn;
     private int numCardsInHandStartedThisTurnWith;
     private int venturedThisTurn;
-    private int maxHandSize = 7;
+    private int maxHandSize = 5;
     private int startingHandSize = 7;
     private boolean unlimitedHandSize = false;
     private Card lastDrawnCard;
@@ -2697,8 +2698,8 @@ public class Player extends GameEntity implements Comparable<Player> {
         inboundTokens.remove(c);
     }
 
-    public void onMulliganned() {
-        game.fireEvent(new GameEventMulligan(this)); // quest listener may interfere here
+    public void onMulliganned(AbstractMulligan mulligan) {
+        game.fireEvent(new GameEventMulligan(this, mulligan)); // quest listener may interfere here
         final int newHand = getCardsIn(ZoneType.Hand).size();
         stats.notifyHasMulliganed();
         stats.notifyOpeningHandSize(newHand);

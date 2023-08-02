@@ -187,7 +187,7 @@ public class StaticEffect {
         // modify players
         for (final Player p : affectedPlayers) {
             p.setUnlimitedHandSize(false);
-            p.setMaxHandSize(p.getStartingHandSize());
+            p.setMaxHandSize(p.getMaxHandSize());
             p.removeChangedKeywords(getTimestamp(), ability.getId());
 
             p.removeMaxLandPlays(getTimestamp());

@@ -47,7 +47,7 @@ import java.util.Set;
  */
 public enum DeckFormat {
     //               Main board: allowed size             SB: restriction   Max distinct non basic cards
-    Constructed    ( Range.between(60, Integer.MAX_VALUE), Range.between(0, 15), 4),
+    Constructed    ( Range.between(20, 30), Range.between(0, 5), 4),
     QuestDeck      ( Range.between(40, Integer.MAX_VALUE), Range.between(0, 15), 4),
     Limited        ( Range.between(40, Integer.MAX_VALUE), null, Integer.MAX_VALUE),
     Commander      ( Range.is(99),                         Range.between(0, 10), 1, null, new Predicate<PaperCard>() {
