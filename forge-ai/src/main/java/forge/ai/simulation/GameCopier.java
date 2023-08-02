@@ -201,7 +201,7 @@ public class GameCopier {
 
     private static void copyStack(Game origGame, Game newGame, GameObjectMap map) {
         for (SpellAbilityStackInstance origEntry : origGame.getStack()) {
-            SpellAbility origSa = origEntry.getSpellAbility(false);
+            SpellAbility origSa = origEntry.getSpellAbility();
             Card origHostCard = origSa.getHostCard();
             Card newCard = map.map(origHostCard);
             SpellAbility newSa = null;
@@ -294,7 +294,7 @@ public class GameCopier {
     private Card createCardCopy(Game newGame, Player newOwner, Card c) {
         if (c.isToken() && !c.isImmutable()) {
             Card result = new TokenInfo(c).makeOneToken(newOwner);
-            CardFactory.copyCopiableCharacteristics(c, result);
+            CardFactory.copyCopiableCharacteristics(c, result, null, null);
             return result;
         }
         if (USE_FROM_PAPER_CARD && !c.isImmutable() && c.getPaperCard() != null) {
@@ -340,6 +340,10 @@ public class GameCopier {
             // TODO: Controllers' list with timestamps should be copied.
             zoneOwner = playerMap.get(c.getController());
             newCard.setController(zoneOwner, 0);
+
+            if (c.isBattle()) {
+                newCard.setProtectingPlayer(playerMap.get(c.getProtectingPlayer()));
+            }
 
             newCard.setCameUnderControlSinceLastUpkeep(c.cameUnderControlSinceLastUpkeep());
 

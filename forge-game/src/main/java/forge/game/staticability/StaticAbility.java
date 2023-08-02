@@ -25,7 +25,6 @@ import java.util.Set;
 
 import com.google.common.collect.*;
 
-import forge.card.MagicColor;
 import forge.game.CardTraitBase;
 import forge.game.Game;
 import forge.game.GameEntity;
@@ -378,14 +377,6 @@ public class StaticAbility extends CardTraitBase implements IIdentifiable, Clone
                 if (!game.getPhaseHandler().getPlayerTurn().isExtraTurn()) {
                     return false;
                 }
-            } else if (condition.equals("PermanentOfEachColor")) {
-                if ((controller.getColoredCardsInPlay(MagicColor.Constant.BLACK).isEmpty()
-                        || controller.getColoredCardsInPlay(MagicColor.Constant.BLUE).isEmpty()
-                        || controller.getColoredCardsInPlay(MagicColor.Constant.GREEN).isEmpty()
-                        || controller.getColoredCardsInPlay(MagicColor.Constant.RED).isEmpty()
-                        || controller.getColoredCardsInPlay(MagicColor.Constant.WHITE).isEmpty())) {
-                    return false;
-                }
             } else if (condition.equals("FatefulHour")) {
                 if (controller.getLife() > 5) {
                     return false;
@@ -603,6 +594,10 @@ public class StaticAbility extends CardTraitBase implements IIdentifiable, Clone
 
             // reset to force refresh if needed
             clone.payingTrigSA = null;
+
+            if (!lki) {
+                clone.mayPlayTurn = 0;
+            }
 
             clone.layers = this.generateLayer();
         } catch (final CloneNotSupportedException e) {

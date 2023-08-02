@@ -27,6 +27,7 @@ public enum TrackableProperty {
     IsImmutable(TrackableTypes.BooleanType),
     IsEmblem(TrackableTypes.BooleanType),
     IsBoon(TrackableTypes.BooleanType),
+    CanSpecialize(TrackableTypes.BooleanType),
 
     Flipped(TrackableTypes.BooleanType),
     Facedown(TrackableTypes.BooleanType),
@@ -54,6 +55,7 @@ public enum TrackableProperty {
     Token(TrackableTypes.BooleanType),
     TokenCard(TrackableTypes.BooleanType),
     IsCommander(TrackableTypes.BooleanType),
+    IsRingBearer(TrackableTypes.BooleanType),
     CommanderAltType(TrackableTypes.StringType),
     Damage(TrackableTypes.IntegerType),
     AssignedDamage(TrackableTypes.IntegerType),
@@ -73,6 +75,7 @@ public enum TrackableProperty {
     ChosenSector(TrackableTypes.StringType),
     Sector(TrackableTypes.StringType),
     ClassLevel(TrackableTypes.IntegerType),
+    RingLevel(TrackableTypes.IntegerType),
     CurrentRoom(TrackableTypes.StringType),
     Intensity(TrackableTypes.IntegerType),
     Remembered(TrackableTypes.StringType),

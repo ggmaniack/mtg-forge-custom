@@ -91,7 +91,7 @@ public class PhaseHandler implements java.io.Serializable {
     private int nUpkeepsThisGame = 0;
     private int nCombatsThisTurn = 0;
     private int nMain2sThisTurn = 0;
-    private int planarDiceRolledthisTurn = 0;
+    private int planarDiceSpecialActionThisTurn = 0;
 
     private transient Player playerTurn = null;
     private transient Player playerPreviousTurn = null;
@@ -465,12 +465,20 @@ public class PhaseHandler implements java.io.Serializable {
             throw new IllegalStateException("Phase.nextPhase() is called, but Stack isn't empty.");
         }
 
+        final Map<Player, Integer> lossMap = Maps.newHashMap();
         for (Player p : game.getPlayers()) {
             int burn = p.getManaPool().clearPool(true).size();
 
             if (p.getManaPool().hasBurn()) {
-                p.loseLife(burn, false, true);
+                final int lost = p.loseLife(burn, false, true);
+                if (lost > 0) {
+                    lossMap.put(p, lost);
+                }
             }
+        }
+        if (!lossMap.isEmpty()) { // Run triggers if any player actually lost life
+            final Map<AbilityKey, Object> runLifeLostParams = AbilityKey.mapFromPIMap(lossMap);
+            game.getTriggerHandler().runTrigger(TriggerType.LifeLostAll, runLifeLostParams, false);
         }
 
         switch (phase) {
@@ -522,7 +530,7 @@ public class PhaseHandler implements java.io.Serializable {
                     final Map<AbilityKey, Object> runParams = AbilityKey.mapFromPlayer(playerTurn);
                     game.getTriggerHandler().runTrigger(TriggerType.TurnBegin, runParams, false);
                 }
-                planarDiceRolledthisTurn = 0;
+                planarDiceSpecialActionThisTurn = 0;
                 // Play the End Turn sound
                 game.fireEvent(new GameEventTurnEnded());
                 break;
@@ -1064,7 +1072,6 @@ public class PhaseHandler implements java.io.Serializable {
                             triggerList.put(originZone.getZoneType(), currentZone.getZoneType(), saHost);
                             triggerList.triggerChangesZoneAll(game, sa);
                         }
-
                     }
                     game.copyLastState();
                     loopCount++;
@@ -1212,11 +1219,11 @@ public class PhaseHandler implements java.io.Serializable {
         onPhaseBegin();
     }
 
-    public int getPlanarDiceRolledthisTurn() {
-        return planarDiceRolledthisTurn;
+    public int getPlanarDiceSpecialActionThisTurn() {
+        return planarDiceSpecialActionThisTurn;
     }
-    public void incPlanarDiceRolledthisTurn() {
-        planarDiceRolledthisTurn++;
+    public void incPlanarDiceSpecialActionThisTurn() {
+        planarDiceSpecialActionThisTurn++;
     }
 
     public String debugPrintState(boolean hasPriority) {

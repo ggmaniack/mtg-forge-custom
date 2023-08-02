@@ -57,10 +57,9 @@ public class SetStateEffect extends SpellAbilityEffect {
         final boolean optional = sa.hasParam("Optional");
         final CardCollection transformedCards = new CardCollection();
 
-        CardCollection cardsToTransform = new CardCollection();
+        CardCollectionView cardsToTransform;
         if (sa.hasParam("Choices")) {
-            CardCollectionView choices = game.getCardsIn(ZoneType.Battlefield);
-            choices = CardLists.getValidCards(choices, sa.getParam("Choices"), p, host, sa);
+            CardCollectionView choices = CardLists.getValidCards(game.getCardsIn(ZoneType.Battlefield), sa.getParam("Choices"), p, host, sa);
 
             final int validAmount = AbilityUtils.calculateAmount(host, sa.getParamOrDefault("Amount", "1"), sa);
             final int minAmount = sa.hasParam("MinAmount") ? Integer.parseInt(sa.getParam("MinAmount")) : validAmount;
@@ -71,8 +70,8 @@ public class SetStateEffect extends SpellAbilityEffect {
 
             String title = sa.hasParam("ChoiceTitle") ? sa.getParam("ChoiceTitle") :
                     Localizer.getInstance().getMessage("lblChooseaCard") + " ";
-            cardsToTransform.addAll(p.getController().chooseCardsForEffect(choices, sa, title, minAmount, validAmount,
-                    !sa.hasParam("Mandatory"), null));
+            cardsToTransform = p.getController().chooseCardsForEffect(choices, sa, title, minAmount, validAmount,
+                    !sa.hasParam("Mandatory"), null);
         } else {
             cardsToTransform = getTargetCards(sa);
         }
@@ -129,7 +128,7 @@ public class SetStateEffect extends SpellAbilityEffect {
                     && gameCard.hasMergedCard()) {
                 boolean hasBackSide = false;
                 for (final Card c : gameCard.getMergedCards()) {
-                    if (c.hasBackSide()) {
+                    if (c.isDoubleFaced()) {
                         hasBackSide = true;
                         break;
                     }
@@ -200,7 +199,7 @@ public class SetStateEffect extends SpellAbilityEffect {
                 if (remChanged) {
                     host.addRemembered(gameCard);
                 }
-                if (!gameCard.isDoubleFaced())
+                if (!gameCard.isTransformable())
                     transformedCards.add(gameCard);
                 if ("Specialize".equals(mode)) {
                     gameCard.setSpecialized(true);

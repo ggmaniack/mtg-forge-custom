@@ -21,6 +21,7 @@ import forge.game.GameObjectPredicates;
 import forge.game.ability.AbilityKey;
 import forge.game.player.Player;
 import forge.game.player.PlayerCollection;
+import forge.game.spellability.SpellAbility;
 import forge.game.trigger.TriggerType;
 
 public class CardDamageMap extends ForwardingTable<Card, GameEntity, Integer> {
@@ -104,11 +105,16 @@ public class CardDamageMap extends ForwardingTable<Card, GameEntity, Integer> {
         game.getTriggerHandler().runTrigger(TriggerType.DamageAll, runParams, false);
     }
 
-    public void triggerExcessDamage(boolean isCombat, Map<Card, Integer> lethalDamage, final Game game, final Map<Integer, Card> lkiCache) {
+    public void triggerExcessDamage(boolean isCombat, Map<Card, Integer> lethalDamage, final Game game, final SpellAbility cause, final Map<Integer, Card> lkiCache) {
+        int storedExcess = 0;
+
         for (Entry<Card, Integer> damaged : lethalDamage.entrySet()) {
             int sum = 0;
             for (Integer i : this.column(damaged.getKey()).values()) {
                 sum += i;
+            }
+            if (sum == 0) {
+                continue;
             }
 
             int excess = sum - (damaged.getKey().hasBeenDealtDeathtouchDamage() ? 1 : damaged.getValue());
@@ -117,6 +123,13 @@ public class CardDamageMap extends ForwardingTable<Card, GameEntity, Integer> {
             // because Rith, Liberated Primeval cares about who controlled it at this moment
             lkiCache.get(damaged.getKey().getId()).setHasBeenDealtExcessDamageThisTurn(excess > 0);
             if (excess > 0) {
+                if (cause != null && cause.hasParam("ExcessSVar")) {
+                    if ((!cause.hasParam("ExcessSVarCondition") || damaged.getKey().isValid(cause.getParam("ExcessSVarCondition"), cause.getActivatingPlayer(), cause.getHostCard(), cause))
+                            && (!cause.hasParam("ExcessSVarTargeted") || damaged.getKey().equals(cause.getTargetCard()))) {
+                        storedExcess += excess;
+                    }
+                }
+
                 damaged.getKey().setHasBeenDealtExcessDamageThisTurn(true);
                 // Run triggers
                 final Map<AbilityKey, Object> runParams = AbilityKey.newMap();
@@ -125,6 +138,10 @@ public class CardDamageMap extends ForwardingTable<Card, GameEntity, Integer> {
                 runParams.put(AbilityKey.IsCombatDamage, isCombat);
                 game.getTriggerHandler().runTrigger(TriggerType.ExcessDamage, runParams, false);
             }
+        }
+
+        if (cause != null && cause.hasParam("ExcessSVar")) {
+            cause.setSVar(cause.getParam("ExcessSVar"), Integer.toString(storedExcess));
         }
     }
 

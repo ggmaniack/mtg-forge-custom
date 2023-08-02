@@ -143,6 +143,10 @@ public class CardProperty {
             if (!card.isBackSide()) {
                 return false;
             }
+        } else if (property.equals("CanTransform")) {
+            if (!card.isTransformable()) {
+                return false;
+            }
         } else if (property.equals("Transformed")) {
             if (!card.isTransformed()) {
                 return false;
@@ -161,6 +165,10 @@ public class CardProperty {
             }
         } else if (property.equals("AdventureCard")) {
             if (!card.isAdventureCard()) {
+                return false;
+            }
+        } else if (property.equals("IsRingbearer")) {
+            if (!card.isRingBearer()) {
                 return false;
             }
         } else if (property.equals("IsTriggerRemembered")) {
@@ -709,11 +717,11 @@ public class CardProperty {
                         }
                         break;
                     case "ActivationColor":
-                        SpellAbilityStackInstance castSA = game.getStack().getInstanceFromSpellAbility((SpellAbility) spellAbility);
+                        SpellAbilityStackInstance castSA = game.getStack().getInstanceMatchingSpellAbilityID((SpellAbility) spellAbility);
                         if (castSA == null) {
                             return false;
                         }
-                        List<Mana> payingMana = castSA.getPayingMana();
+                        List<Mana> payingMana = castSA.getSpellAbility().getPayingMana();
                         // even if the cost was raised, we only care about mana from activation part
                         // since this can only be 1 currently with Protective Sphere, let's just assume it's the first shard spent for easy handling
                         if (payingMana.isEmpty() || !card.getColor().hasAnyColor(payingMana.get(0).getColor())) {
@@ -1305,14 +1313,28 @@ public class CardProperty {
                 }
             }
         } else if (property.startsWith("leastPower")) {
-            final CardCollectionView cards = CardLists.filter(game.getCardsIn(ZoneType.Battlefield), Presets.CREATURES);
+            CardCollectionView cards = CardLists.filter(game.getCardsIn(ZoneType.Battlefield), Presets.CREATURES);
+            if (property.contains("ControlledBy")) {
+                FCollectionView<Player> p = AbilityUtils.getDefinedPlayers(source, property.split("ControlledBy")[1], spellAbility);
+                cards = CardLists.filterControlledBy(cards, p);
+                if (!cards.contains(card)) {
+                    return false;
+                }
+            }
             for (final Card crd : cards) {
                 if (crd.getNetPower() < card.getNetPower()) {
                     return false;
                 }
             }
         } else if (property.startsWith("leastToughness")) {
-            final CardCollectionView cards = CardLists.filter(game.getCardsIn(ZoneType.Battlefield), Presets.CREATURES);
+            CardCollectionView cards = CardLists.filter(game.getCardsIn(ZoneType.Battlefield), Presets.CREATURES);
+            if (property.contains("ControlledBy")) { // 4/25/2023 only used for adventure mode Death Ring
+                FCollectionView<Player> p = AbilityUtils.getDefinedPlayers(source, property.split("ControlledBy")[1], spellAbility);
+                cards = CardLists.filterControlledBy(cards, p);
+                if (!cards.contains(card)) {
+                    return false;
+                }
+            }
             for (final Card crd : cards) {
                 if (crd.getNetToughness() < card.getNetToughness()) {
                     return false;

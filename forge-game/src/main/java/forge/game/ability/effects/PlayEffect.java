@@ -25,6 +25,7 @@ import forge.game.ability.AbilityUtils;
 import forge.game.ability.SpellAbilityEffect;
 import forge.game.card.Card;
 import forge.game.card.CardCollection;
+import forge.game.card.CardCollectionView;
 import forge.game.card.CardFactoryUtil;
 import forge.game.card.CardZoneTable;
 import forge.game.cost.Cost;
@@ -109,13 +110,13 @@ public class PlayEffect extends SpellAbilityEffect {
         }
 
         CardCollection tgtCards;
-        CardCollection showCards = new CardCollection();
+        CardCollectionView showCards = new CardCollection();
 
         if (sa.hasParam("Valid")) {
             List<ZoneType> zones = sa.hasParam("ValidZone") ? ZoneType.listValueOf(sa.getParam("ValidZone")) : ImmutableList.of(ZoneType.Hand);
             tgtCards = new CardCollection(AbilityUtils.filterListByType(game.getCardsIn(zones), sa.getParam("Valid"), sa));
             if (sa.hasParam("ShowCards")) {
-                showCards = new CardCollection(AbilityUtils.filterListByType(game.getCardsIn(zones), sa.getParam("ShowCards"), sa));
+                showCards = AbilityUtils.filterListByType(game.getCardsIn(zones), sa.getParam("ShowCards"), sa);
             }
         } else if (sa.hasParam("AnySupportedCard")) {
             final String valid = sa.getParam("AnySupportedCard");
@@ -369,15 +370,23 @@ public class PlayEffect extends SpellAbilityEffect {
             if ((sa.hasParam("WithoutManaCost") || sa.hasParam("PlayCost")) && tgtSA.costHasManaX() && !tgtSA.getPayCosts().getCostMana().canXbe0()) {
                 continue;
             }
+
+            boolean unpayableCost = tgtSA.getHostCard().getManaCost().isNoCost();
             if (sa.hasParam("WithoutManaCost")) {
                 tgtSA = tgtSA.copyWithNoManaCost();
             } else if (sa.hasParam("PlayCost")) {
                 Cost abCost;
                 String cost = sa.getParam("PlayCost");
                 if (cost.equals("ManaCost")) {
+                    if (unpayableCost) {
+                        continue;
+                    }
                     abCost = new Cost(source.getManaCost(), false);
                 } else {
                     if (cost.contains("ConvertedManaCost")) {
+                        if (unpayableCost) {
+                            continue;
+                        }
                         final String costcmc = Integer.toString(tgtCard.getCMC());
                         cost = cost.replace("ConvertedManaCost", costcmc);
                     }
@@ -385,6 +394,8 @@ public class PlayEffect extends SpellAbilityEffect {
                 }
 
                 tgtSA = tgtSA.copyWithManaCostReplaced(tgtSA.getActivatingPlayer(), abCost);
+            } else if (unpayableCost) {
+                continue;
             }
 
             if (!optional) {
@@ -416,6 +427,10 @@ public class PlayEffect extends SpellAbilityEffect {
 
             if (sa.hasParam("Madness")) {
                 tgtSA.setAlternativeCost(AlternativeCost.Madness);
+            }
+
+            if (sa.hasParam("CastTransformed")) {
+                tgtSA.putParam("CastTransformed", "True");
             }
 
             if (tgtSA.usesTargeting() && !optional) {

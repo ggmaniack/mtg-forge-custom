@@ -212,6 +212,13 @@ public abstract class CardTraitBase extends GameObject implements IHasCardView, 
             if (ArrayUtils.contains(valids, o)) {
                 return true;
             }
+        } else if (o instanceof PlanarDice) {
+            for (String s : valids) {
+                PlanarDice valid = PlanarDice.smartValueOf(s);
+                if (((PlanarDice) o).name().equals(valid.name())) {
+                    return true;
+                }
+            }
         }
 
         return false;
@@ -257,7 +264,7 @@ public abstract class CardTraitBase extends GameObject implements IHasCardView, 
 
         // intervening if check, make sure to use right controller
         if (game.getStack().isResolving(getHostCard())) {
-            SpellAbility sa = game.getStack().peek().getSpellAbility(false);
+            SpellAbility sa = game.getStack().peek().getSpellAbility();
             if (sa.isTrigger()) {
                 hostController = sa.getActivatingPlayer();
             }

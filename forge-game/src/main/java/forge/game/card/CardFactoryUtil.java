@@ -89,15 +89,6 @@ import io.sentry.Sentry;
  */
 public class CardFactoryUtil {
 
-    public static SpellAbility buildBasicLandAbility(final CardState state, byte color) {
-        String strcolor = MagicColor.toShortString(color);
-        String abString  = "AB$ Mana | Cost$ T | Produced$ " + strcolor +
-                " | Secondary$ True | SpellDescription$ Add {" + strcolor + "}.";
-        SpellAbility sa = AbilityFactory.getAbility(abString, state);
-        sa.setIntrinsic(true); // always intrisic
-        return sa;
-    }
-
     /**
      * <p>
      * abilityMorphDown.
@@ -532,7 +523,13 @@ public class CardFactoryUtil {
     public static List<String> sharedKeywords(final Iterable<String> kw, final String[] restrictions,
             final Iterable<ZoneType> zones, final Card host, CardTraitBase ctb) {
         final List<String> filteredkw = Lists.newArrayList();
-        final Player p = host.getController();
+        Player p = null;
+        if (ctb instanceof SpellAbility) {
+            p = ((SpellAbility)ctb).getActivatingPlayer();
+        }
+        if (p == null) {
+            p = host.getController();
+        }
         CardCollectionView cardlist = p.getGame().getCardsIn(zones);
         final Set<String> landkw = Sets.newHashSet();
         final Set<String> protectionkw = Sets.newHashSet();
@@ -815,9 +812,9 @@ public class CardFactoryUtil {
             inst.addTrigger(trigger);
         } else if (keyword.equals("Ascend")) {
             // Ascend trigger only for Permanent
-            if (card.isPermanent()) {
-                final String trig = "Mode$ Always | TriggerZones$ Battlefield | Secondary$ True"
-                        + " | Static$ True | Blessing$ False | IsPresent$ Permanent.YouCtrl | PresentCompare$ GE10 "
+            if (card.isPermanent() || card.isPlane()) {
+                final String trig = "Mode$ Always | TriggerZones$ " + (card.isPlane() ? "Command" : "Battlefield")
+                        + " | Secondary$ True | Static$ True | Blessing$ False | IsPresent$ Permanent.YouCtrl | PresentCompare$ GE10"
                         + " | TriggerDescription$ Ascend (" + inst.getReminderText() + ")";
 
                 final String effect = "DB$ Ascend | Defined$ You";
@@ -1318,8 +1315,8 @@ public class CardFactoryUtil {
 
             // Second, create the trigger that runs when the haunted creature dies
             final StringBuilder sbDies = new StringBuilder();
-            sbDies.append("Mode$ ChangesZone | Origin$ Battlefield | Destination$ Graveyard | TriggerZones$ Exile |");
-            sbDies.append("ValidCard$ Creature.HauntedBy | Execute$ ").append(hauntSVarName);
+            sbDies.append("Mode$ ChangesZone | Origin$ Battlefield | Destination$ Graveyard | TriggerZones$ Exile");
+            sbDies.append(" | ValidCard$ Creature.HauntedBy | Execute$ ").append(hauntSVarName);
             sbDies.append(" | TriggerDescription$ ").append(hauntDescription);
 
             final Trigger hauntedDies = TriggerHandler.parseTrigger(sbDies.toString(), card, intrinsic);
@@ -1369,7 +1366,7 @@ public class CardFactoryUtil {
             // First, create trigger that runs when the haunter goes to the graveyard
             final StringBuilder sbHaunter = new StringBuilder();
             sbHaunter.append("Mode$ ChangesZone | Origin$ ");
-            sbHaunter.append(card.isCreature() ? "Battlefield" : "Stack | ResolvedCard$ True");
+            sbHaunter.append(card.isCreature() ? "Battlefield" : "Stack | Fizzle$ False");
             sbHaunter.append(" | Destination$ Graveyard | ValidCard$ Card.Self");
             sbHaunter.append(" | Secondary$ True | TriggerDescription$ Haunt (").append(inst.getReminderText()).append(")");
 
@@ -1566,7 +1563,7 @@ public class CardFactoryUtil {
                     + " | TriggerDescription$ Myriad (" + inst.getReminderText() + ")";
 
             final String copyStr = "DB$ CopyPermanent | Defined$ Self | TokenTapped$ True | Optional$ True | TokenAttacking$ Remembered"
-                    + "| ForEach$ OpponentsOtherThanDefendingPlayer | ChoosePlayerOrPlaneswalker$ True | AtEOT$ ExileCombat | CleanupForEach$ True";
+                    + "| ForEach$ OppNonDefendingPlayer | ChoosePlayerOrPlaneswalker$ True | AtEOT$ ExileCombat | CleanupForEach$ True";
 
             final SpellAbility copySA = AbilityFactory.getAbility(copyStr, card);
             copySA.setIntrinsic(intrinsic);
@@ -1631,9 +1628,6 @@ public class CardFactoryUtil {
             parsedTrigger.setOverridingAbility(AbilityFactory.getAbility(effect, card));
 
             inst.addTrigger(parsedTrigger);
-        } else if (keyword.startsWith("Presence")) {
-            final String[] k = keyword.split(":");
-            card.addIntrinsicKeyword("Kicker:Reveal<1/" + k[1] + ">:Generic");
         } else if (keyword.equals("Provoke")) {
             final String actualTrigger = "Mode$ Attacks | ValidCard$ Card.Self | OptionalDecider$ You | Secondary$ True"
                     + " | TriggerDescription$ Provoke (" + inst.getReminderText() + ")";
@@ -2578,15 +2572,6 @@ public class CardFactoryUtil {
             final ReplacementEffect re = makeEtbCounter(sb.toString(), card, intrinsic);
 
             inst.addReplacement(re);
-        } else if (keyword.equals("If CARDNAME would be destroyed, regenerate it.")) {
-            String repeffstr = "Event$ Destroy | ActiveZones$ Battlefield | ValidCard$ Card.Self"
-                    + " | Secondary$ True | Regeneration$ True | Description$ " + keyword;
-            String effect = "DB$ Regeneration | Defined$ ReplacedCard";
-            ReplacementEffect re = ReplacementHandler.parseReplacement(repeffstr, host, intrinsic, card);
-            SpellAbility sa = AbilityFactory.getAbility(effect, card);
-            re.setOverridingAbility(sa);
-
-            inst.addReplacement(re);
         }
 
         // extra part for the Damage Prevention keywords
@@ -2640,30 +2625,6 @@ public class CardFactoryUtil {
             rep += " | Secondary$ True | Description$ " + keyword;
 
             ReplacementEffect re = ReplacementHandler.parseReplacement(rep, host, intrinsic, card);
-            inst.addReplacement(re);
-        }
-        else if (keyword.startsWith("If CARDNAME would be put into a graveyard "
-                + "from anywhere, reveal CARDNAME and shuffle it into its owner's library instead.")) {
-            StringBuilder sb = new StringBuilder("Event$ Moved | Destination$ Graveyard | ValidCard$ Card.Self ");
-
-            // to show it on Nexus
-            if (host.isPermanent()) {
-                sb.append("| Secondary$ True");
-            }
-            sb.append("| Description$ ").append(keyword);
-
-            String ab =  "DB$ ChangeZone | Hidden$ True | Origin$ All | Destination$ Library | Defined$ ReplacedCard | Reveal$ True | Shuffle$ True";
-
-            SpellAbility sa = AbilityFactory.getAbility(ab, card);
-
-            if (!intrinsic) {
-                sa.setIntrinsic(false);
-            }
-
-            ReplacementEffect re = ReplacementHandler.parseReplacement(sb.toString(), host, intrinsic, card);
-
-            re.setOverridingAbility(sa);
-
             inst.addReplacement(re);
         }
 
@@ -3380,7 +3341,7 @@ public class CardFactoryUtil {
             final String manacost = k[1];
 
             final String effect = "AB$ CopyPermanent | Cost$ " + manacost + " ExileFromGrave<1/CARDNAME> | ActivationZone$ Graveyard" +
-                    "| Defined$ Self | PumpKeywords$ Haste | RememberTokens$ True | ForEach$ Opponent" +
+                    "| SorcerySpeed$ True | Defined$ Self | PumpKeywords$ Haste | RememberTokens$ True | ForEach$ Opponent" +
                     "| AtEOT$ Sacrifice | PrecostDesc$ Encore | CostDesc$ " + ManaCostParser.parse(manacost) +
                     "| SpellDescription$ (" + inst.getReminderText() + ")";
 
@@ -3932,7 +3893,7 @@ public class CardFactoryUtil {
         StringBuilder chooseSB = new StringBuilder();
         chooseSB.append("Event$ Moved | ValidCard$ Card.Self | Destination$ Battlefield | ReplacementResult$ Updated");
         chooseSB.append(" | Description$ (As a Siege enters the battlefield, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)");
-        String chooseProtector = "DB$ ChoosePlayer | Defined$ You | Choices$ Opponent | Protect$ True | ChoiceTitle$ Choose an opponent to protect this battle | AILogic$ Curse";
+        String chooseProtector = "DB$ ChoosePlayer | Defined$ You | Choices$ Opponent | Protect$ True | ChoiceTitle$ Choose an opponent to protect this battle";
 
         ReplacementEffect re = ReplacementHandler.parseReplacement(chooseSB.toString(), card, true);
         re.setOverridingAbility(AbilityFactory.getAbility(chooseProtector, card));
